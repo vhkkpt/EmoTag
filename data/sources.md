@@ -1,0 +1,3 @@
+- OriginalAnnotations.csv: [https://github.com/imdiptanu/lyrics-emotion-detection](https://github.com/imdiptanu/lyrics-emotion-detection)
+- final_df_emotions(remove-bias).csv: [https://www.kaggle.com/datasets/mexwell/poem-dataset](https://www.kaggle.com/datasets/mexwell/poem-dataset)
+- goemotions: [https://research.google/blog/goemotions-a-dataset-for-fine-grained-emotion-classification/](https://research.google/blog/goemotions-a-dataset-for-fine-grained-emotion-classification/)
