@@ -15,7 +15,7 @@ import sys
 
 
 GLOVE_EMBEDDING_DIM = 200
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 BERT_MAX_LENGTH = 256
 
 
@@ -30,16 +30,16 @@ def main(model_type):
     if model_type in ['FNN', 'CNN', 'Transformer']:
         print("Loading GloVe embeddings...")
         glove = GloVe(f'glove.6B.{GLOVE_EMBEDDING_DIM}d.txt', GLOVE_EMBEDDING_DIM)
-        train_set = textdataset.TextDataset('data/PERC/train.csv', lambda text: glove.tokenize_fn(text))
-        test_set = textdataset.TextDataset('data/PERC/test.csv', lambda text: glove.tokenize_fn(text))
+        train_set = textdataset.TextDataset('data/train.csv', lambda text: glove.tokenize_fn(text))
+        test_set = textdataset.TextDataset('data/test.csv', lambda text: glove.tokenize_fn(text))
         train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
                                   collate_fn=lambda batch: textdataset.collate_fn(batch, device))
         test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False,
                                  collate_fn=lambda batch: textdataset.collate_fn(batch, device))
     else:
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        train_set = berttextdataset.BertTextDataset('data/PERC/train.csv', tokenizer, max_length=BERT_MAX_LENGTH)
-        test_set = berttextdataset.BertTextDataset('data/PERC/test.csv', tokenizer, max_length=BERT_MAX_LENGTH)
+        train_set = berttextdataset.BertTextDataset('data/train.csv', tokenizer, max_length=BERT_MAX_LENGTH)
+        test_set = berttextdataset.BertTextDataset('data/test.csv', tokenizer, max_length=BERT_MAX_LENGTH)
         train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
         test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False)
 

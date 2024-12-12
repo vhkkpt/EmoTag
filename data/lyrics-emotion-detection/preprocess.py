@@ -6,16 +6,24 @@ df = pd.read_csv('OriginalAnnotations.csv')
 new_df = pd.DataFrame()
 new_df['content'] = df['lyrics']
 
-emotions = ['Amazement', 'Calmness', 'Joyful activation', 'Nostalgia', 'Power', 'Sadness', 'Solemnity', 'Tenderness', 'Tension']
+positive_scores = {
+    'Amazement': 0.8,
+    'Calmness': 0.5,
+    'Joyful activation': 1.0,
+    'Nostalgia': 0.0,
+    'Power': 0.2,
+    'Sadness': -1.0,
+    'Solemnity': 0.0,
+    'Tenderness': 0.7,
+    'Tension': -0.7
+}
 
-for emotion in emotions:
-    new_df[emotion] = 0
-    new_df.loc[df[emotion] != 0, emotion] = 1
+cols = positive_scores.keys()
+weights = pd.Series(positive_scores)
+df['score'] = df[cols].mul(weights).sum(axis=1)
 
-train_df, test_df = train_test_split(new_df, test_size=0.2, random_state=42)
+new_df['label'] = df['score'].apply(
+    lambda x: 1 if x >= 0 else 0
+)
 
-print(f'Training set size: {len(train_df)}')
-print(f'Test set size: {len(test_df)}')
-
-train_df.to_csv('train.csv', index=False)
-test_df.to_csv('test.csv', index=False)
+new_df.to_csv('result.csv', index=False)
