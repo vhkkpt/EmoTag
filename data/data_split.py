@@ -1,17 +1,17 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-test_ratio=0.2
-val_ratio=0.1
+test_ratio = 0.2
+val_ratio = 0.2
 
-df=pd.read_csv('data_auto.csv')
+df = pd.read_csv('data/data_auto.csv')
 
-train, temp = train_test_split(df, test_size=test_ratio+val_ratio)
-test, val = train_test_split(temp, test_size=val_ratio/(test_ratio+val_ratio))
+# Split into train + validation and test
+train_val, test = train_test_split(df, test_size=test_ratio, random_state=42)
+# Split train_val into train and validation
+train, val = train_test_split(train_val, test_size=val_ratio, random_state=42)
 
-print('train:', len(train))
-print('test:', len(test))
-print('val:', len(val))
+print(f"Train size: {len(train)}, Validation size: {len(val)}, Test size: {len(test)}")
 
 train.to_csv('train.csv', index=False)
 test.to_csv('test.csv', index=False)
