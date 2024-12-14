@@ -260,7 +260,7 @@ def transformer_tuning(hyperparams):
                                       num_layers=param_dict['num_layers'], 
                                       dropout=param_dict['dropout']).to(device)
 
-        optimizer = optim.Adam(model.parameters(), lr=param_dict['learning_rate'])
+        optimizer = optim.Adam(model.parameters(), lr=param_dict['learning_rate'], weight_decay=1e-3)
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
@@ -325,7 +325,7 @@ def bert_tuning(hyperparams):
 
         # Train the model and evaluate on validation dataset
         max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
-        train_accuracies, val_accuracies = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
+        train_accuracies, val_accuracies = train_and_evaluate(model, bert_train_loader, bert_val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
@@ -381,13 +381,13 @@ def main(model_name):
 
     elif model_name == 'cnn':
         cnn_hyperparams = {
-            'num_filters': [50, 100],
+            'num_filters': [100], #[50, 100, 150]
             'kernel_sizes': [(3, 4, 5)],
-            'dropout': [0, 0.1],
+            'dropout': [0], #[0, 0.1, 0.2]
             'learning_rate': [1e-3, 5e-4],
             'batch_size': [32, 64],
             'num_classes': [1],
-            'num_epochs': [5]
+            'num_epochs': [40]
         }
 
         best_cnn_params, cnn_loss, cnn_acc = cnn_tuning(cnn_hyperparams)
@@ -397,12 +397,12 @@ def main(model_name):
 
     elif model_name == 'transformer':
         transformer_hyperparams = {
-            'num_heads': [4, 8],
-            'h_size': [128, 256],
-            'num_layers': [1, 2],
+            'num_heads': [4], #[4,8]
+            'h_size': [256], #[128, 256]
+            'num_layers': [2], #[1,2]
             'dropout': [0.1, 0.2],
             'learning_rate': [5e-5, 1e-4],
-            'batch_size': [32, 64],
+            'batch_size': [16], #[8, 16, 32]
             'num_classes': [1],
             'num_epochs': [40]
         }
