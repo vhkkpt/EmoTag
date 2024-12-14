@@ -23,11 +23,11 @@ glove = GloVe(f'glove.6B.{GLOVE_EMBEDDING_DIM}d.txt', GLOVE_EMBEDDING_DIM)
 
 # Prepare datasets and data loaders
 train_set = textdataset.TextDataset('data/train.csv', lambda text: glove.tokenize_fn(text))
-val_set = textdataset.TextDataset('data/val.csv', lambda text: glove.tokenize_fn(text))
+test_set = textdataset.TextDataset('data/test.csv', lambda text: glove.tokenize_fn(text))
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_train_set = berttextdataset.BertTextDataset('data/train.csv', tokenizer, max_length=BERT_MAX_LENGTH)
-bert_val_set = berttextdataset.BertTextDataset('data/val.csv', tokenizer, max_length=BERT_MAX_LENGTH)
+bert_test_set = berttextdataset.BertTextDataset('data/test.csv', tokenizer, max_length=BERT_MAX_LENGTH)
 
 # Define training and evaluation function
 def train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, num_epochs):
@@ -260,7 +260,7 @@ def transformer_tuning(hyperparams):
                                       num_layers=param_dict['num_layers'], 
                                       dropout=param_dict['dropout']).to(device)
 
-        optimizer = optim.AdamW(model.parameters(), lr=param_dict['learning_rate'], weight_decay=1e-3)
+        optimizer = optim.Adam(model.parameters(), lr=param_dict['learning_rate'], weight_decay=1e-3)
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
