@@ -37,48 +37,48 @@ def train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, nu
     val_losses = []
     val_accuracies = []
 
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs+1):
         model.train()
         total_loss = 0
-        correct = 0
-        total = 0
+        train_correct = 0
+        train_total = 0
 
         # Training loop (across all batches)
         for batch in train_loader:
             optimizer.zero_grad()
-            inputs, labels = batch[0].to(device), batch[1].to(device).unsqueeze(1)
+            inputs, labels = batch[0].to(device), batch[1].to(device).squeeze()
             outputs = model(inputs).squeeze()
-            loss = criterion(outputs, labels)
+            loss = criterion(outputs, labels.float())
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
-            preds = (outputs > 0.5).float()
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
+            preds = (torch.sigmoid(outputs) > 0.5).float()
+            train_correct += (preds == labels).sum().item()
+            train_total += labels.size(0)
 
         # Calculate training loss and accuracy
         train_loss = total_loss / len(train_loader)
-        train_acc = correct / total
+        train_acc = train_correct / train_total
 
         # Evaluate on validation dataset
         model.eval()
         val_loss = 0
-        correct = 0
-        total = 0
+        val_correct = 0
+        val_total = 0
         with torch.no_grad():
             for batch in val_loader:
-                inputs, labels = batch[0].to(device), batch[1].to(device).unsqueeze(1)
+                inputs, labels = batch[0].to(device), batch[1].to(device).squeeze()
                 outputs = model(inputs).squeeze()
-                loss = criterion(outputs, labels)
+                loss = criterion(outputs, labels.float())
                 val_loss += loss.item()
 
-                preds = (outputs > 0.5).float()
-                correct += (preds == labels).sum().item()
-                total += labels.size(0)
+                preds = (torch.sigmoid(outputs) > 0.5).float()
+                val_correct += (preds == labels).sum().item()
+                val_total += labels.size(0)
 
         val_loss /= len(val_loader)
-        val_acc = correct / total
+        val_acc = val_correct / val_total
 
         # Append to metrics
         train_losses.append(train_loss)
@@ -87,31 +87,23 @@ def train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, nu
         val_accuracies.append(val_acc)
 
         # Print epoch metrics
-        print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+        print(f"Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+    
+    # Find minimum value for val_losses
+    min_val_loss = min(val_losses)
+    min_val_loss_index = val_losses.index(min_val_loss)
+    min_val_loss_epoch = min_val_loss_index + 1
 
-    # Plotting the training and validation loss
-    plt.figure(figsize=(12, 6))
-    plt.subplot(1, 2, 1)
-    plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
-    plt.plot(range(1, num_epochs + 1), val_losses, label='Validation Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Training and Validation Loss')
+    # Find maximum value for val_accuracies
+    max_val_acc = max(val_accuracies)
+    max_val_acc_index = val_accuracies.index(max_val_acc)
+    max_val_acc_epoch = max_val_acc_index + 1
+    val_loss_at_max_acc = val_losses[max_val_acc_index]
 
-    # Plotting the training and validation accuracy
-    plt.subplot(1, 2, 2)
-    plt.plot(range(1, num_epochs + 1), train_accuracies, label='Training Accuracy')
-    plt.plot(range(1, num_epochs + 1), val_accuracies, label='Validation Accuracy')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.legend()
-    plt.title('Training and Validation Accuracy')
+    print(f"Minimum validation loss: {min_val_loss:.4f} at epoch {min_val_loss_epoch}")
+    print(f"Maximum validation accuracy: {max_val_acc:.4f} at epoch {max_val_acc_epoch}")
 
-    plt.tight_layout()
-    plt.show()
-
-    return train_losses, train_accuracies, val_losses, val_accuracies
+    return max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, train_accuracies, val_accuracies
 
 
 # Define hyperparameter tuning functions for all 4 models
@@ -120,6 +112,10 @@ def fnn_tuning(hyperparams):
     best_params = None
     best_loss = float('inf')
     best_acc = 0
+    best_train_losses = []
+    best_val_losses = []
+    best_train_accuracies = []
+    best_val_accuracies = []
 
     for params in product(*hyperparams.values()):
         # Unpack hyperparameters
@@ -140,13 +136,41 @@ def fnn_tuning(hyperparams):
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
-        _, _, val_loss, val_acc = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
+        max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
+        train_accuracies, val_accuracies = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
-        if val_loss < best_loss or (val_loss == best_loss and val_acc > best_acc):
-            best_loss = val_loss
-            best_acc = val_acc
+        if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
+            best_loss = val_loss_at_max_acc
+            best_acc = max_val_acc
             best_params = param_dict
+            best_params['num_epochs'] = max_val_acc_epoch
+            best_train_losses = train_losses
+            best_val_losses = val_losses
+            best_train_accuracies = train_accuracies
+            best_val_accuracies = val_accuracies
+
+    # Plotting the training and validation loss
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_losses, label='Training Loss')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Loss')
+
+    # Plotting the training and validation accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_accuracies, label='Training Accuracy')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Accuracy')
+
+    plt.tight_layout()
+    plt.show()       
 
     return best_params, best_loss, best_acc
 
@@ -175,13 +199,41 @@ def cnn_tuning(hyperparams):
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
-        _, _, val_loss, val_acc = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
+        max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
+        train_accuracies, val_accuracies = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
-        if val_loss < best_loss or (val_loss == best_loss and val_acc > best_acc):
-            best_loss = val_loss
-            best_acc = val_acc
+        if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
+            best_loss = val_loss_at_max_acc
+            best_acc = max_val_acc
             best_params = param_dict
+            best_params['num_epochs'] = max_val_acc_epoch
+            best_train_losses = train_losses
+            best_val_losses = val_losses
+            best_train_accuracies = train_accuracies
+            best_val_accuracies = val_accuracies
+
+    # Plotting the training and validation loss
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_losses, label='Training Loss')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Loss')
+
+    # Plotting the training and validation accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_accuracies, label='Training Accuracy')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Accuracy')
+
+    plt.tight_layout()
+    plt.show()
 
     return best_params, best_loss, best_acc
 
@@ -212,13 +264,41 @@ def transformer_tuning(hyperparams):
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
-        _, _, val_loss, val_acc = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
+        max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
+        train_accuracies, val_accuracies = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
-        if val_loss < best_loss or (val_loss == best_loss and val_acc > best_acc):
-            best_loss = val_loss
-            best_acc = val_acc
+        if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
+            best_loss = val_loss_at_max_acc
+            best_acc = max_val_acc
             best_params = param_dict
+            best_params['num_epochs'] = max_val_acc_epoch
+            best_train_losses = train_losses
+            best_val_losses = val_losses
+            best_train_accuracies = train_accuracies
+            best_val_accuracies = val_accuracies
+
+    # Plotting the training and validation loss
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_losses, label='Training Loss')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Loss')
+
+    # Plotting the training and validation accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_accuracies, label='Training Accuracy')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Accuracy')
+
+    plt.tight_layout()
+    plt.show()
 
     return best_params, best_loss, best_acc
 
@@ -244,13 +324,41 @@ def bert_tuning(hyperparams):
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on validation dataset
-        _, _, val_loss, val_acc = train_and_evaluate(model, bert_train_loader, bert_val_loader, optimizer, criterion, param_dict['num_epochs'])
+        max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
+        train_accuracies, val_accuracies = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
-        if val_loss < best_loss or (val_loss == best_loss and val_acc > best_acc):
-            best_loss = val_loss
-            best_acc = val_acc
+        if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
+            best_loss = val_loss_at_max_acc
+            best_acc = max_val_acc
             best_params = param_dict
+            best_params['num_epochs'] = max_val_acc_epoch
+            best_train_losses = train_losses
+            best_val_losses = val_losses
+            best_train_accuracies = train_accuracies
+            best_val_accuracies = val_accuracies
+
+    # Plotting the training and validation loss
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_losses, label='Training Loss')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Loss')
+
+    # Plotting the training and validation accuracy
+    plt.subplot(1, 2, 2)
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_train_accuracies, label='Training Accuracy')
+    plt.plot(range(1, param_dict['num_epochs'] + 1), best_val_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Best Hyperparameter Training and Validation Accuracy')
+
+    plt.tight_layout()
+    plt.show()
 
     return best_params, best_loss, best_acc
 
@@ -263,7 +371,7 @@ def main(model_name):
             'batch_size': [16, 32, 64], 
             'num_classes': [1],
             'h_size': [64],
-            'num_epochs': [10]
+            'num_epochs': [100]
         }
 
         best_fnn_params, fnn_loss, fnn_acc = fnn_tuning(fnn_hyperparams)
@@ -273,13 +381,13 @@ def main(model_name):
 
     elif model_name == 'cnn':
         cnn_hyperparams = {
-            'num_filters': [50, 100, 200],
-            'kernel_sizes': [(3, 4, 5), (3, 5)],
-            'dropout': [0.1, 0.2],
+            'num_filters': [50, 100],
+            'kernel_sizes': [(3, 4, 5)],
+            'dropout': [0, 0.1],
             'learning_rate': [1e-3, 5e-4],
-            'batch_size': [16, 32, 64],
+            'batch_size': [32, 64],
             'num_classes': [1],
-            'num_epochs': [40]
+            'num_epochs': [5]
         }
 
         best_cnn_params, cnn_loss, cnn_acc = cnn_tuning(cnn_hyperparams)
@@ -310,8 +418,8 @@ def main(model_name):
             'learning_rate': [2e-5, 3e-5],
             'batch_size': [16, 32],
             'num_classes': [1],
-            'dropout': [0.3],
-            'num_epochs': [3, 5]
+            'dropout': [0.1, 0.2],
+            'num_epochs': [10]
         }
 
         best_bert_params, bert_loss, bert_acc = bert_tuning(bert_hyperparams)
