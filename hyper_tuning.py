@@ -14,6 +14,7 @@ import torch.optim as optim
 import torch.nn as nn
 import sys
 import matplotlib.pyplot as plt
+import copy
 
 # Global variables
 GLOVE_EMBEDDING_DIM = 200
@@ -143,7 +144,7 @@ def fnn_tuning(hyperparams):
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
             best_loss = val_loss_at_max_acc
             best_acc = max_val_acc
-            best_params = param_dict
+            best_params = copy.deepcopy(param_dict)
             best_params['num_epochs'] = max_val_acc_epoch
             best_train_losses = train_losses
             best_val_losses = val_losses
@@ -206,7 +207,7 @@ def cnn_tuning(hyperparams):
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
             best_loss = val_loss_at_max_acc
             best_acc = max_val_acc
-            best_params = param_dict
+            best_params = copy.deepcopy(param_dict)
             best_params['num_epochs'] = max_val_acc_epoch
             best_train_losses = train_losses
             best_val_losses = val_losses
@@ -271,7 +272,7 @@ def transformer_tuning(hyperparams):
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
             best_loss = val_loss_at_max_acc
             best_acc = max_val_acc
-            best_params = param_dict
+            best_params = copy.deepcopy(param_dict)
             best_params['num_epochs'] = max_val_acc_epoch
             best_train_losses = train_losses
             best_val_losses = val_losses
@@ -331,7 +332,7 @@ def bert_tuning(hyperparams):
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):
             best_loss = val_loss_at_max_acc
             best_acc = max_val_acc
-            best_params = param_dict
+            best_params = copy.deepcopy(param_dict)
             best_params['num_epochs'] = max_val_acc_epoch
             best_train_losses = train_losses
             best_val_losses = val_losses
@@ -400,7 +401,7 @@ def main(model_name):
             'num_heads': [4], #[4,8]
             'h_size': [256], #[128, 256]
             'num_layers': [2], #[1,2]
-            'dropout': [0.1, 0.2],
+            'dropout': [0.1], #[0.1, 0.2]
             'learning_rate': [5e-5, 1e-4],
             'batch_size': [16], #[8, 16, 32]
             'num_classes': [1],
