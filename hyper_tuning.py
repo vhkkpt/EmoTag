@@ -106,6 +106,85 @@ def train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, nu
 
     return max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, train_accuracies, val_accuracies
 
+def bert_train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, num_epochs):
+    # Store metrics for plotting
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
+ 
+    for epoch in range(1, num_epochs+1):
+        model.train()
+        total_loss = 0
+        train_correct = 0
+        train_total = 0
+ 
+        # Training loop (across all batches)
+        for input_ids, attention_mask, labels in train_loader:
+            optimizer.zero_grad()
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
+            outputs = model(input_ids, attention_mask).squeeze()
+            loss = criterion(outputs, labels.float())
+            loss.backward()
+            optimizer.step()
+ 
+            total_loss += loss.item()
+            preds = (torch.sigmoid(outputs) > 0.5).float()
+            train_correct += (preds == labels).sum().item()
+            train_total += labels.size(0)
+ 
+        # Calculate training loss and accuracy
+        train_loss = total_loss / len(train_loader)
+        train_acc = train_correct / train_total
+ 
+        # Evaluate on validation dataset
+        model.eval()
+        val_loss = 0
+        val_correct = 0
+        val_total = 0
+        with torch.no_grad():
+            for input_ids, attention_mask, labels in val_loader:
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
+                labels = labels.to(device)
+                outputs = model(input_ids, attention_mask).squeeze()
+                loss = criterion(outputs, labels.float())
+                val_loss += loss.item()
+ 
+                preds = (torch.sigmoid(outputs) > 0.5).float()
+                val_correct += (preds == labels).sum().item()
+                val_total += labels.size(0)
+ 
+        val_loss /= len(val_loader)
+        val_acc = val_correct / val_total
+ 
+        # Append to metrics
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc)
+ 
+        # Print epoch metrics
+        print(f"Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+   
+    # Find minimum value for val_losses
+    min_val_loss = min(val_losses)
+    min_val_loss_index = val_losses.index(min_val_loss)
+    min_val_loss_epoch = min_val_loss_index + 1
+ 
+    # Find maximum value for val_accuracies
+    max_val_acc = max(val_accuracies)
+    max_val_acc_index = val_accuracies.index(max_val_acc)
+    max_val_acc_epoch = max_val_acc_index + 1
+    val_loss_at_max_acc = val_losses[max_val_acc_index]
+ 
+    print(f"Minimum validation loss: {min_val_loss:.4f} at epoch {min_val_loss_epoch}")
+    print(f"Maximum validation accuracy: {max_val_acc:.4f} at epoch {max_val_acc_epoch}")
+ 
+    return max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, train_accuracies, val_accuracies
+
 
 # Define hyperparameter tuning functions for all 4 models
 
@@ -326,7 +405,7 @@ def bert_tuning(hyperparams):
 
         # Train the model and evaluate on validation dataset
         max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, \
-        train_accuracies, val_accuracies = train_and_evaluate(model, bert_train_loader, bert_val_loader, optimizer, criterion, param_dict['num_epochs'])
+        train_accuracies, val_accuracies = bert_train_and_evaluate(model, bert_train_loader, bert_val_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on validation loss and accuracy
         if max_val_acc > best_acc or (max_val_acc == best_acc and val_loss_at_max_acc < best_loss):

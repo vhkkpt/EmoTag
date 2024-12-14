@@ -107,9 +107,89 @@ def train_and_evaluate(model, train_loader, test_loader, optimizer, criterion, n
     return max_test_acc_epoch, max_test_acc, test_loss_at_max_acc, train_losses, test_losses, train_accuracies, test_accuracies
 
 
-# Define hyperparameter tuning functions for all 4 models
+def bert_train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, num_epochs):
+    # Store metrics for plotting
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
+ 
+    for epoch in range(1, num_epochs+1):
+        model.train()
+        total_loss = 0
+        train_correct = 0
+        train_total = 0
+ 
+        # Training loop (across all batches)
+        for input_ids, attention_mask, labels in train_loader:
+            optimizer.zero_grad()
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
+            outputs = model(input_ids, attention_mask).squeeze()
+            loss = criterion(outputs, labels.float())
+            loss.backward()
+            optimizer.step()
+ 
+            total_loss += loss.item()
+            preds = (torch.sigmoid(outputs) > 0.5).float()
+            train_correct += (preds == labels).sum().item()
+            train_total += labels.size(0)
+ 
+        # Calculate training loss and accuracy
+        train_loss = total_loss / len(train_loader)
+        train_acc = train_correct / train_total
+ 
+        # Evaluate on validation dataset
+        model.eval()
+        val_loss = 0
+        val_correct = 0
+        val_total = 0
+        with torch.no_grad():
+            for input_ids, attention_mask, labels in val_loader:
+                input_ids = input_ids.to(device)
+                attention_mask = attention_mask.to(device)
+                labels = labels.to(device)
+                outputs = model(input_ids, attention_mask).squeeze()
+                loss = criterion(outputs, labels.float())
+                val_loss += loss.item()
+ 
+                preds = (torch.sigmoid(outputs) > 0.5).float()
+                val_correct += (preds == labels).sum().item()
+                val_total += labels.size(0)
+ 
+        val_loss /= len(val_loader)
+        val_acc = val_correct / val_total
+ 
+        # Append to metrics
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc)
+ 
+        # Print epoch metrics
+        print(f"Epoch [{epoch}/{num_epochs}], Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+   
+    # Find minimum value for val_losses
+    min_val_loss = min(val_losses)
+    min_val_loss_index = val_losses.index(min_val_loss)
+    min_val_loss_epoch = min_val_loss_index + 1
+ 
+    # Find maximum value for val_accuracies
+    max_val_acc = max(val_accuracies)
+    max_val_acc_index = val_accuracies.index(max_val_acc)
+    max_val_acc_epoch = max_val_acc_index + 1
+    val_loss_at_max_acc = val_losses[max_val_acc_index]
+ 
+    print(f"Minimum validation loss: {min_val_loss:.4f} at epoch {min_val_loss_epoch}")
+    print(f"Maximum validation accuracy: {max_val_acc:.4f} at epoch {max_val_acc_epoch}")
+ 
+    return max_val_acc_epoch, max_val_acc, val_loss_at_max_acc, train_losses, val_losses, train_accuracies, val_accuracies
 
-def fnn_tuning(hyperparams):
+
+# Define test functions for all 4 models
+
+def fnn_test(hyperparams):
     best_params = None
     best_loss = float('inf')
     best_acc = 0
@@ -175,7 +255,7 @@ def fnn_tuning(hyperparams):
 
     return best_params, best_loss, best_acc
 
-def cnn_tuning(hyperparams):
+def cnn_test(hyperparams):
     best_params = None
     best_loss = float('inf')
     best_acc = 0
@@ -238,7 +318,7 @@ def cnn_tuning(hyperparams):
 
     return best_params, best_loss, best_acc
 
-def transformer_tuning(hyperparams):
+def transformer_test(hyperparams):
     best_params = None
     best_loss = float('inf')
     best_acc = 0
@@ -303,7 +383,7 @@ def transformer_tuning(hyperparams):
 
     return best_params, best_loss, best_acc
 
-def bert_tuning(hyperparams):
+def bert_test(hyperparams):
     best_params = None
     best_loss = float('inf')
     best_acc = 0
@@ -326,7 +406,7 @@ def bert_tuning(hyperparams):
 
         # Train the model and evaluate on test dataset
         max_test_acc_epoch, max_test_acc, test_loss_at_max_acc, train_losses, test_losses, \
-        train_accuracies, test_accuracies = train_and_evaluate(model, train_loader, test_loader, optimizer, criterion, param_dict['num_epochs'])
+        train_accuracies, test_accuracies = bert_train_and_evaluate(model, bert_train_loader, bert_test_loader, optimizer, criterion, param_dict['num_epochs'])
 
         # Update best parameters based on test loss and accuracy
         if max_test_acc > best_acc or (max_test_acc == best_acc and test_loss_at_max_acc < best_loss):
@@ -363,7 +443,7 @@ def bert_tuning(hyperparams):
     return best_params, best_loss, best_acc
 
 
-# Hyperparameter tuning for all models
+# Testing for all models
 def main(model_name):
     if model_name == 'fnn':
         fnn_hyperparams = {
@@ -374,40 +454,40 @@ def main(model_name):
             'num_epochs': [100]
         }
 
-        best_fnn_params, fnn_loss, fnn_acc = fnn_tuning(fnn_hyperparams)
+        best_fnn_params, fnn_loss, fnn_acc = fnn_test(fnn_hyperparams)
         print("Best FNN Params:", best_fnn_params)
         print("FNN Test Loss:", fnn_loss)
         print("FNN Test Accuracy:", fnn_acc)
 
     elif model_name == 'cnn':
         cnn_hyperparams = {
-            'num_filters': [100], #[50, 100, 150]
+            'num_filters': [100],
             'kernel_sizes': [(3, 4, 5)],
-            'dropout': [0], #[0, 0.1, 0.2]
+            'dropout': [0],
             'learning_rate': [1e-3],
             'batch_size': [64],
             'num_classes': [1],
             'num_epochs': [20]
         }
 
-        best_cnn_params, cnn_loss, cnn_acc = cnn_tuning(cnn_hyperparams)
+        best_cnn_params, cnn_loss, cnn_acc = cnn_test(cnn_hyperparams)
         print("Best CNN Params:", best_cnn_params)
         print("CNN Test Loss:", cnn_loss)
         print("CNN Test Accuracy:", cnn_acc)
 
     elif model_name == 'transformer':
         transformer_hyperparams = {
-            'num_heads': [4], #[4,8]
-            'h_size': [256], #[128, 256]
-            'num_layers': [2], #[1,2]
+            'num_heads': [4],
+            'h_size': [256],
+            'num_layers': [2],
             'dropout': [0.1],
             'learning_rate': [5e-06],
-            'batch_size': [16], #[8, 16, 32]
+            'batch_size': [16],
             'num_classes': [1],
             'num_epochs': [40]
         }
 
-        best_transformer_params, transformer_loss, transformer_acc = transformer_tuning(transformer_hyperparams)
+        best_transformer_params, transformer_loss, transformer_acc = transformer_test(transformer_hyperparams)
         print("Best Transformer Params:", best_transformer_params)
         print("Transformer Test Loss:", transformer_loss)
         print("Transformer Test Accuracy:", transformer_acc)
@@ -422,7 +502,7 @@ def main(model_name):
             'num_epochs': [10]
         }
 
-        best_bert_params, bert_loss, bert_acc = bert_tuning(bert_hyperparams)
+        best_bert_params, bert_loss, bert_acc = bert_test(bert_hyperparams)
         print("Best BERT Params:", best_bert_params)
         print("BERT Test Loss:", bert_loss)
         print("BERT Test Accuracy:", bert_acc)
@@ -432,7 +512,7 @@ def main(model_name):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("Usage: python hyper_tuning.py <model_name>")
+        print("Usage: python model_testing.py <model_name>")
     else:
         model_name = sys.argv[1].lower()
         main(model_name)
