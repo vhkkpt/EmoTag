@@ -31,16 +31,21 @@ def main(model_type):
         print("Loading GloVe embeddings...")
         glove = GloVe(f'glove.6B.{GLOVE_EMBEDDING_DIM}d.txt', GLOVE_EMBEDDING_DIM)
         train_set = textdataset.TextDataset('data/train.csv', lambda text: glove.tokenize_fn(text))
+        val_set = textdataset.TextDataset('data/val.csv', lambda text: glove.tokenize_fn(text))
         test_set = textdataset.TextDataset('data/test.csv', lambda text: glove.tokenize_fn(text))
         train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,
+                                  collate_fn=lambda batch: textdataset.collate_fn(batch, device))
+        val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False,
                                   collate_fn=lambda batch: textdataset.collate_fn(batch, device))
         test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False,
                                  collate_fn=lambda batch: textdataset.collate_fn(batch, device))
     else:
         tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         train_set = berttextdataset.BertTextDataset('data/train.csv', tokenizer, max_length=BERT_MAX_LENGTH)
+        val_set = berttextdataset.BertTextDataset('data/val.csv', tokenizer, max_length=BERT_MAX_LENGTH)
         test_set = berttextdataset.BertTextDataset('data/test.csv', tokenizer, max_length=BERT_MAX_LENGTH)
         train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
+        val_loader = DataLoader(val_set, batch_size=BATCH_SIZE, shuffle=False)
         test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=False)
 
     if model_type == 'FNN':
