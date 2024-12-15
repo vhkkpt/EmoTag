@@ -1,6 +1,8 @@
+import matplotlib.pyplot as plt
+
 # Updated test accuracies for the models
 models = ["FNN", "CNN", "Transformer", "BERT (Pre-trained)"]
-accuracies = [0.7222, 0.7361, 0.7639, 0.8194]
+accuracies = [0.7208, 0.7487, 0.7589, 0.7995]
 
 # Sort the models and accuracies for visualization
 sorted_indices = sorted(range(len(accuracies)), key=lambda k: accuracies[k])

@@ -454,7 +454,7 @@ def main(model_name):
             'learning_rate': [1e-3, 5e-4, 1e-4],
             'batch_size': [16, 32, 64], 
             'num_classes': [1],
-            'h_size': [64],
+            'h_size': [32, 64],
             'num_epochs': [100]
         }
 
