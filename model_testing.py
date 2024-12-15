@@ -239,7 +239,7 @@ def fnn_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Loss')
+    plt.title('FNN Training and Test Loss')
 
     # Plotting the training and test accuracy
     plt.subplot(1, 2, 2)
@@ -248,7 +248,7 @@ def fnn_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Accuracy')
+    plt.title('FNN Training and Test Accuracy')
 
     plt.tight_layout()
     plt.show()
@@ -302,7 +302,7 @@ def cnn_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Loss')
+    plt.title('CNN Training and Test Loss')
 
     # Plotting the training and test accuracy
     plt.subplot(1, 2, 2)
@@ -311,7 +311,7 @@ def cnn_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Accuracy')
+    plt.title('CNN Training and Test Accuracy')
 
     plt.tight_layout()
     plt.show()
@@ -367,7 +367,7 @@ def transformer_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Loss')
+    plt.title('Transformer Training and Test Loss')
 
     # Plotting the training and test accuracy
     plt.subplot(1, 2, 2)
@@ -376,7 +376,7 @@ def transformer_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Accuracy')
+    plt.title('Transformer Training and Test Accuracy')
 
     plt.tight_layout()
     plt.show()
@@ -427,7 +427,7 @@ def bert_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Loss')
+    plt.title('BERT Training and Test Loss')
 
     # Plotting the training and test accuracy
     plt.subplot(1, 2, 2)
@@ -436,7 +436,7 @@ def bert_test(hyperparams):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
-    plt.title('Best Hyperparameter Training and Test Accuracy')
+    plt.title('BERT Training and Test Accuracy')
 
     plt.tight_layout()
     plt.show()
@@ -495,11 +495,11 @@ def main(model_name):
 
     elif model_name == 'bert':
         bert_hyperparams = {
-            'learning_rate': [2e-5, 3e-5],
-            'batch_size': [16, 32],
+            'learning_rate': [3e-5],
+            'batch_size': [16],
             'num_classes': [1],
-            'dropout': [0.1, 0.2],
-            'num_epochs': [10]
+            'dropout': [0.2],
+            'num_epochs': [5]
         }
 
         best_bert_params, bert_loss, bert_acc = bert_test(bert_hyperparams)
