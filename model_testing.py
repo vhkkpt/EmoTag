@@ -15,6 +15,7 @@ import torch.nn as nn
 import sys
 import matplotlib.pyplot as plt
 import copy
+import numpy as np
 
 # Global variables
 GLOVE_EMBEDDING_DIM = 200
@@ -341,7 +342,7 @@ def transformer_test(hyperparams):
                                       num_layers=param_dict['num_layers'], 
                                       dropout=param_dict['dropout']).to(device)
 
-        optimizer = optim.Adam(model.parameters(), lr=param_dict['learning_rate'], weight_decay=1e-3)
+        optimizer = optim.AdamW(model.parameters(), lr=param_dict['learning_rate'], weight_decay=1e-2)
         criterion = nn.BCEWithLogitsLoss()
 
         # Train the model and evaluate on test dataset
@@ -445,6 +446,9 @@ def bert_test(hyperparams):
 
 # Testing for all models
 def main(model_name):
+    torch.manual_seed(19260817)
+    np.random.seed(19260817)
+
     if model_name == 'fnn':
         fnn_hyperparams = {
             'learning_rate': [1e-3],
@@ -482,9 +486,9 @@ def main(model_name):
             'num_layers': [2],
             'dropout': [0.1],
             'learning_rate': [5e-06],
-            'batch_size': [16],
+            'batch_size': [4],
             'num_classes': [1],
-            'num_epochs': [40]
+            'num_epochs': [60]
         }
 
         best_transformer_params, transformer_loss, transformer_acc = transformer_test(transformer_hyperparams)

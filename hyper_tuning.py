@@ -15,6 +15,7 @@ import torch.nn as nn
 import sys
 import matplotlib.pyplot as plt
 import copy
+import numpy as np
 
 # Global variables
 GLOVE_EMBEDDING_DIM = 200
@@ -445,6 +446,9 @@ def bert_tuning(hyperparams):
 
 # Hyperparameter tuning for all models
 def main(model_name):
+    torch.manual_seed(19260817)
+    np.random.seed(19260817)
+
     if model_name == 'fnn':
         fnn_hyperparams = {
             'learning_rate': [1e-3, 5e-4, 1e-4],
